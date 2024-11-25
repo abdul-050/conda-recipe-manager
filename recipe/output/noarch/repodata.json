@@ -1,0 +1,36 @@
+{
+  "info": {
+    "subdir": "noarch"
+  },
+  "packages": {},
+  "packages.conda": {
+    "conda-recipe-manager-0.3.4-pyh4616a5c_0.conda": {
+      "build": "pyh4616a5c_0",
+      "build_number": 0,
+      "depends": [
+        "python >=3.11",
+        "click >=8.1.7",
+        "conda",
+        "jinja2",
+        "pyyaml",
+        "jsonschema",
+        "requests",
+        "gitpython",
+        "networkx",
+        "matplotlib",
+        "pygraphviz",
+        "python"
+      ],
+      "license": "BSD-3-Clause",
+      "md5": "037f3f5c59cd2c90a38d30f4c366185f",
+      "name": "conda-recipe-manager",
+      "noarch": "python",
+      "sha256": "3278333d38e04087d64d8080ad00f62ab923b6c362ed02d12454844bce68d279",
+      "size": 192931,
+      "subdir": "noarch",
+      "timestamp": 1732549224381,
+      "version": "0.3.4"
+    }
+  },
+  "repodata_version": 2
+}
