@@ -33,12 +33,15 @@ jobs:
             recipes_v0/anaconda_recipes_01
 
       # Set up the environment
-      - name: Setup Conda Environment
+      - name: Set up Conda environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          conda-version: 'latest'
+          python-version: '3.11'
+          auto-activate-base: false  # Do not auto-activate the base environment
+          
+      - name: Install required dependencies
         run: |
-          echo "Running conda init for non-interactive shells"
-          source ~/miniconda3/etc/profile.d/conda.sh  # Adjust this path if necessary
-          conda init bash
-          source ~/.bashrc  # Make sure changes take effect
           conda create -y -n conda-recipe-manager python=3.11
           conda activate conda-recipe-manager
           conda install -y -c conda-forge rattler-build jq
