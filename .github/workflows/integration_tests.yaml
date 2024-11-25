@@ -30,7 +30,7 @@ jobs:
           repository: conda-incubator/conda-recipe-manager-test-data
           path: test_data
           sparse-checkout: |
-            recipes_v0/anaconda_recipes_01
+            recipes_v0/anaconda_recipes_01  # Make sure this path matches where the files are located
       - uses: ./.github/actions/setup-env
         with:
           python-version: "3.11"
@@ -43,8 +43,9 @@ jobs:
           set -o pipefail
           export PREFIX=""
           export RECIPE_DIR=""
-          # Process one recipe at a time to save memory
-          for recipe in "recipes_v0/anaconda_recipes_01/types-toml-feedstock/recipe/meta.yaml"; do
+          
+          # Process one recipe at a time using paths from the JSON
+          for recipe in "test_data/recipes_v0/anaconda_recipes_01/types-toml-feedstock/recipe/meta.yaml"; do
             echo "Processing recipe: $recipe"
             conda-recipe-manager \
               convert -t -m ${{ matrix.convert-success }} -o recipe.yaml $recipe \
