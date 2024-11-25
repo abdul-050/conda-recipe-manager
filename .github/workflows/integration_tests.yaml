@@ -1,11 +1,11 @@
-name: Full Build Integration Tests
-
 on:
   push:
     branches:
       - main
   pull_request:
   workflow_dispatch:  # Trigger workflow manually from GitHub UI
+
+name: Full Build Integration Tests
 
 jobs:
   ## Integration tests ##
@@ -23,7 +23,10 @@ jobs:
             convert-success: 0.90
             rattler-success: 0.75
     steps:
+      # Checkout the main repository
       - uses: actions/checkout@v4
+      
+      # Checkout the test data repository
       - uses: actions/checkout@v4
         with:
           repository: conda-incubator/conda-recipe-manager-test-data
@@ -31,15 +34,16 @@ jobs:
           sparse-checkout: |
             recipes_v0/anaconda_recipes_01
 
-      # Set up the environment
+      # Set up Conda environment
       - name: Set up Conda environment
         uses: conda-incubator/setup-miniconda@v2
         with:
-          conda-version: 'latest'
+          conda-version: 'latest'  # Automatically use the latest version of conda
           python-version: '3.11'
           auto-activate-base: false  # Do not auto-activate the base environment
-          
-      - name: Install required dependencies
+
+      # Install necessary dependencies
+      - name: Install dependencies
         run: |
           conda create -y -n conda-recipe-manager python=3.11
           conda activate conda-recipe-manager
@@ -73,20 +77,32 @@ jobs:
           name: integration-logs-${{ matrix.test-directory }}
           path: logs/*.log
 
+  # Final Results
   integration-final-results:
     runs-on: ubuntu-latest
     name: Integration Testing Final Report
     needs: [integration-rattler]
     timeout-minutes: 5
     steps:
+      # Checkout the repository again
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      # Set up Conda environment again for the report generation
+      - uses: ./.github/actions/setup-env
+        with:
+          python-version: "3.11"
+          
+      - name: Make artifact directory
+        run: mkdir -p logs
+
       # Download logs
       - uses: actions/download-artifact@v4
         with:
           name: integration-logs-${{ matrix.test-directory }}
           path: logs/
 
-      # Generate Final Report
-      - name: Generate Report
+      # Generate the final report
+      - name: Integration Testing Report
         run: |
           source $CONDA/bin/activate
           conda activate conda-recipe-manager
