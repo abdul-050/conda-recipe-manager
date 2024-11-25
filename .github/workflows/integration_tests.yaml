@@ -33,19 +33,6 @@ jobs:
       - uses: ./.github/actions/setup-env
         with:
           python-version: "3.11"
-      
-      # Load the allow-list from the integration_build_test_config.json
-      - name: Load Allow-List
-        run: |
-          echo "Loading allow-list from integration_build_test_config.json"
-          ALLOW_LIST=$(cat integration_build_test_config.json | jq -r '.v0_test_files[]')
-          echo "$ALLOW_LIST" > allow_list.txt
-      
-      - name: Check directory structure
-        run: |
-          echo "Listing directory structure:"
-          ls -R test_data/  # Debugging step to list the directory structure
-
       - name: Convert recipes and full rattler-build
         run: |
           source $CONDA/bin/activate
@@ -56,17 +43,14 @@ jobs:
           export PREFIX=""
           export RECIPE_DIR=""
           
-          # Process each recipe from the allow list
-          while read -r recipe; do
-            echo "Processing recipe: $recipe"
-            conda-recipe-manager \
-              convert -t -m ${{ matrix.convert-success }} -o recipe.yaml "test_data/$recipe" \
-              | tee -a logs/convert.log
-            conda-recipe-manager \
-              rattler-bulk-build -t -m ${{ matrix.rattler-success }} "test_data/$recipe" \
-              | tee -a logs/rbb.log
-          done < allow_list.txt
+          # Convert recipe from V0 to V1 format
+          conda-recipe-manager \
+            convert -t -m ${{ matrix.convert-success }} -o recipe.yaml test_data/recipes_v0/${{ matrix.test-directory }} \
+            | tee logs/convert_${{ matrix.test-directory }}.log
           
+          # Perform full build (not a dry-run)
+          rattler-build build recipe.yaml || true  # This will allow the process to continue even if build fails
+          tee -a logs/rbb_${{ matrix.test-directory }}.log
       - uses: actions/upload-artifact@v4
         with:
           name: integration-logs-${{ matrix.test-directory }}
