@@ -1,5 +1,3 @@
-name: Full Build Integration Tests
-
 on:
   push:
     branches:
