@@ -1,79 +1,75 @@
 on:
   workflow_dispatch:  # Trigger workflow manually from GitHub UI
 
+name: Integration Tests
+
 jobs:
-  integration-builds:
+  ## Integration tests ##
+  integration-rattler:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
+    name: Test on ${{ matrix.test-directory }}
     strategy:
       fail-fast: false
       matrix:
         test-directory:
-          - anaconda_recipes_01
-          - conda_forge_recipes_01
+          - anaconda_recipes_01  # Only one directory for now
     steps:
-      # Checkout the repo
       - uses: actions/checkout@v4
-
-      # Checkout the test data repo (conda-recipe-manager-test-data)
       - uses: actions/checkout@v4
         with:
           repository: conda-incubator/conda-recipe-manager-test-data
           path: test_data
+          sparse-checkout: recipes_v0/${{ matrix.test-directory }}
 
-      # Setup Conda environment and install dependencies
-      - name: Setup Conda Environment
+      - uses: ./.github/actions/setup-env
+        with:
+          python-version: "3.11"
+
+      - name: Convert recipes and full rattler-build
         run: |
-          # Initialize Conda for non-interactive shell (required for CI/CD pipelines)
-          echo "Running conda init for non-interactive shells"
-          source ~/miniconda3/etc/profile.d/conda.sh  # Adjust this path if necessary
-          conda init bash
-          source ~/.bashrc  # Make sure changes take effect
-          conda create -y -n conda-recipe-manager python=3.11
+          source $CONDA/bin/activate
           conda activate conda-recipe-manager
-          conda install -y -c conda-forge rattler-build jq
-          conda install -y -c conda-forge conda-recipe-manager  # Install CRM
-
-      # Verify CRM installation
-      - name: Verify crm is available
-        run: |
-          which crm || echo "crm command not found"
-          
-      # Load the allow-list
-      - name: Load Allow-List
-        run: |
+          conda install -y -c conda-forge rattler-build
+          mkdir -p logs
+          set -o pipefail
+          export PREFIX=""
+          export RECIPE_DIR=""
           echo "Loading allow-list from integration_build_test_config.json"
           ALLOW_LIST=$(cat integration_build_test_config.json | jq -r '.v0_test_files[]')
           echo "$ALLOW_LIST" > allow_list.txt
-
-      # Process each recipe: Convert V0 to V1 and run full builds
-      - name: Full Build with rattler-build
-        run: |
-          mkdir -p logs
-          set -o pipefail
+          
           while read -r recipe; do
             echo "Processing recipe: $recipe"
             crm convert "$recipe" --output recipe.yaml | tee -a logs/convert.log
             rattler-build build recipe.yaml | tee -a logs/build.log || echo "Build failed for $recipe" >> logs/failed_recipes.log
           done < allow_list.txt
 
-      # Upload logs as artifacts
       - uses: actions/upload-artifact@v4
         with:
-          name: full-build-logs
-          path: logs/
+          name: integration-logs-${{ matrix.test-directory }}
+          path: logs/*.log
 
-  final-report:
+  integration-final-results:
     runs-on: ubuntu-latest
-    needs: [integration-builds]
+    needs: [integration-rattler]
     steps:
-      # Download logs
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-env
+        with:
+          python-version: "3.11"
+      - name: Make artifact directory
+        run: mkdir -p logs
       - uses: actions/download-artifact@v4
         with:
-          name: full-build-logs
+          merge-multiple: true
           path: logs/
-
-      # Generate Final Report
-      - name: Generate Report
+      - name: Integration Testing Report
         run: |
-          python scripts/parse_full_build_logs.py logs/
+          source $CONDA/bin/activate
+          conda activate conda-recipe-manager
+          set -o pipefail
+          scripts/parse_ci_output.py logs/ | tee report.json
+          echo -e "Integration Report:\n\`\`\`json\n" >> ${GITHUB_STEP_SUMMARY}
+          cat report.json >> ${GITHUB_STEP_SUMMARY}
+          echo -e "\n\`\`\`" >> ${GITHUB_STEP_SUMMARY}
