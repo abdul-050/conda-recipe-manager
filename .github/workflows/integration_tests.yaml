@@ -24,7 +24,11 @@ jobs:
       # Setup Conda environment and install dependencies
       - name: Setup Conda Environment
         run: |
-          source $CONDA/bin/activate
+          # Initialize Conda for non-interactive shell (required for CI/CD pipelines)
+          echo "Running conda init for non-interactive shells"
+          source ~/miniconda3/etc/profile.d/conda.sh  # Adjust this path if necessary
+          conda init bash
+          source ~/.bashrc  # Make sure changes take effect
           conda create -y -n conda-recipe-manager python=3.11
           conda activate conda-recipe-manager
           conda install -y -c conda-forge rattler-build jq
@@ -33,7 +37,6 @@ jobs:
       # Verify CRM installation
       - name: Verify crm is available
         run: |
-          conda activate conda-recipe-manager  # Re-activate environment if necessary
           which crm || echo "crm command not found"
           
       # Load the allow-list
