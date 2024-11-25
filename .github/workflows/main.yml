@@ -1,0 +1,72 @@
+name: Full Build Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  integration-builds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        test-directory:
+          - anaconda_recipes_01
+          - conda_forge_recipes_01
+    steps:
+      # Clone the test data repository
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: conda-incubator/conda-recipe-manager-test-data
+          path: test_data
+
+      # Setup the environment
+      - name: Setup Conda Environment
+        run: |
+          source $CONDA/bin/activate
+          conda create -y -n conda-recipe-manager python=3.11
+          conda activate conda-recipe-manager
+          conda install -y -c conda-forge rattler-build jq
+
+      # Load the allow-list
+      - name: Load Allow-List
+        run: |
+          echo "Loading allow-list from integration_build_test_config.json"
+          ALLOW_LIST=$(cat integration_build_test_config.json | jq -r '.v0_test_files[]')
+          echo "$ALLOW_LIST" > allow_list.txt
+
+      # Process each recipe
+      - name: Full Build with rattler-build
+        run: |
+          mkdir -p logs
+          set -o pipefail
+          while read -r recipe; do
+            echo "Processing recipe: $recipe"
+            crm convert "$recipe" --output recipe.yaml | tee -a logs/convert.log
+            rattler-build build recipe.yaml | tee -a logs/build.log || echo "Build failed for $recipe" >> logs/failed_recipes.log
+          done < allow_list.txt
+
+      # Upload logs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: full-build-logs
+          path: logs/
+
+  final-report:
+    runs-on: ubuntu-latest
+    needs: [integration-builds]
+    steps:
+      # Download logs
+      - uses: actions/download-artifact@v4
+        with:
+          name: full-build-logs
+          path: logs/
+
+      # Generate Final Report
+      - name: Generate Report
+        run: |
+          python scripts/parse_full_build_logs.py logs/
