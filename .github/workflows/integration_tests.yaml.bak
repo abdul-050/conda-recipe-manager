@@ -8,7 +8,6 @@ on:
 name: Integration Tests
 
 jobs:
-  ## Integration tests ##
   integration-rattler:
     # NOTES:
     #   - `pipefail` must be enabled in order to get the exit code from the conda-recipe-manager commands when
@@ -40,7 +39,7 @@ jobs:
       - uses: ./.github/actions/setup-env
         with:
           python-version: "3.11"
-      - name: Convert recipes and full rattler-build
+      - name: Convert recipes and dry-run rattler-build
         run: |
           source $CONDA/bin/activate
           conda activate conda-recipe-manager
@@ -52,9 +51,8 @@ jobs:
           conda-recipe-manager \
             convert -t -m ${{ matrix.convert-success }} -o recipe.yaml test_data/recipes_v0/${{ matrix.test-directory }} \
             | tee logs/convert_${{ matrix.test-directory }}.log
-          # Removed --render-only for full build instead of dry-run
           conda-recipe-manager \
-            rattler-bulk-build -t -m ${{ matrix.rattler-success }} test_data/recipes_v0/${{ matrix.test-directory }} \
+            rattler-bulk-build -t -m ${{ matrix.rattler-success }} test_data/recipes_v0/${{ matrix.test-directory }} --render-only \
             | tee logs/rbb_${{ matrix.test-directory }}.log
       - uses: actions/upload-artifact@v4
         with:
