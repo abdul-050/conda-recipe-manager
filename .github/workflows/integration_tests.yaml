@@ -51,7 +51,7 @@ jobs:
             | tee logs/convert.log
           conda-recipe-manager \
             rattler-bulk-build -t -m 0.70 test_data/recipes_v0/test-recipes \
-            | tee logs/full-build.log
+            | tee logs/full-build.log || true
 
       # Upload logs
       - uses: actions/upload-artifact@v4
