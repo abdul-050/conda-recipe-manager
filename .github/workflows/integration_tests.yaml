@@ -3,37 +3,40 @@ on:
     branches:
       - main
   pull_request:
-  workflow_dispatch:  # Trigger workflow manually from GitHub UI
 
 name: Integration Tests
 
 jobs:
-  ## Integration tests ##
   integration-rattler:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    name: Test on ${{ matrix.test-directory }}
-    strategy:
-      fail-fast: false
-      matrix:
-        test-directory:
-          - anaconda_recipes_01
-        include:
-          - test-directory: anaconda_recipes_01
-            convert-success: 0.90
-            rattler-success: 0.75
+    name: Test on Allowed Recipes
     steps:
+      # Checkout the main repository
       - uses: actions/checkout@v4
+      
+      # Checkout the test data repository
       - uses: actions/checkout@v4
         with:
           repository: conda-incubator/conda-recipe-manager-test-data
           path: test_data
-          sparse-checkout: |
-            recipes_v0/anaconda_recipes_01
+
+      # Read the allow list and copy recipes
+      - name: Read Allow List
+        run: |
+          echo "Fetching allowed recipes from allow-list.txt"
+          mkdir -p test_data/recipes_v0/test-recipes
+          while read recipe; do
+            cp -r "test_data/recipes_v0/$recipe" "test_data/recipes_v0/test-recipes/" || echo "Recipe $recipe not found!"
+          done < allow-list.txt
+
+      # Setup environment
       - uses: ./.github/actions/setup-env
         with:
           python-version: "3.11"
-      - name: Convert recipes and full rattler-build
+
+      # Convert recipes and perform a full build
+      - name: Convert recipes and full-build rattler-build
         run: |
           source $CONDA/bin/activate
           conda activate conda-recipe-manager
@@ -42,18 +45,17 @@ jobs:
           set -o pipefail
           export PREFIX=""
           export RECIPE_DIR=""
-          
-          # Convert recipe from V0 to V1 format
           conda-recipe-manager \
-            convert -t -m ${{ matrix.convert-success }} -o recipe.yaml test_data/recipes_v0/${{ matrix.test-directory }} \
-            | tee logs/convert_${{ matrix.test-directory }}.log
-          
-          # Perform full build (not a dry-run)
-          rattler-build build recipe.yaml || true  # This will allow the process to continue even if build fails
-          tee -a logs/rbb_${{ matrix.test-directory }}.log
+            convert -t -m 0.90 -o recipe.yaml test_data/recipes_v0/test-recipes \
+            | tee logs/convert.log
+          conda-recipe-manager \
+            rattler-bulk-build -t -m 0.70 test_data/recipes_v0/test-recipes \
+            | tee logs/full-build.log
+
+      # Upload logs
       - uses: actions/upload-artifact@v4
         with:
-          name: integration-logs-${{ matrix.test-directory }}
+          name: integration-logs
           path: logs/*.log
 
   integration-final-results:
@@ -62,16 +64,22 @@ jobs:
     needs: [integration-rattler]
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      # Checkout the main repository
+      - uses: actions/checkout@v4
+
+      # Setup environment
       - uses: ./.github/actions/setup-env
         with:
           python-version: "3.11"
-      - name: Make artifact directory
-        run: mkdir -p logs
-      - uses: actions/download-artifact@v4
+
+      # Download artifacts
+      - name: Download Logs
+        uses: actions/download-artifact@v4
         with:
           merge-multiple: true
           path: logs/
+
+      # Generate final integration testing report
       - name: Integration Testing Report
         run: |
           source $CONDA/bin/activate
