@@ -1,26 +1,41 @@
 import sys
-import re
+import json
+
+# Check for input arguments
+if len(sys.argv) != 2:
+    print("Usage: python summary.py <log_file>")
+    sys.exit(1)
 
 log_file = sys.argv[1]
 
+# Initialize counters
 total_recipes = 0
 failed_recipes = 0
 passed_recipes = 0
 failed_list = []
 
-with open(log_file, "r") as f:
-    for line in f:
-        if "total_recipes_processed" in line:
-            match = re.search(r'"total_recipes_processed": (\d+)', line)
-            if match:
-                total_recipes += int(match.group(1))
-        elif "Error:" in line:
-            recipe_match = re.search(r"Recipe: (\S+)", line)
-            if recipe_match:
-                failed_list.append(recipe_match.group(1))
-                failed_recipes += 1
+# Parse the log file
+try:
+    with open(log_file, "r") as f:
+        logs = json.load(f)  # Parse the JSON content
+        
+        # Extract statistics
+        if "statistics" in logs:
+            stats = logs["statistics"]
+            total_recipes += stats.get("total_recipes_processed", 0)
+            failed_recipes += stats.get("total_errors", 0)
+            passed_recipes = total_recipes - failed_recipes
 
-passed_recipes = total_recipes - failed_recipes
+        # Extract failed recipes
+        if "recipes_with_build_error_code" in logs:
+            failed_list.extend(logs["recipes_with_build_error_code"])
+
+except FileNotFoundError:
+    print(f"Error: File '{log_file}' not found.")
+    sys.exit(1)
+except json.JSONDecodeError:
+    print(f"Error: Failed to parse JSON from '{log_file}'.")
+    sys.exit(1)
 
 # Print summary
 print(f"Total Recipes: {total_recipes}")
