@@ -33,11 +33,10 @@ def aggregate_stats(stats: list[dict[str, int | float]]) -> dict[str, int | floa
             accumulated_stats.setdefault(key, 0)
             accumulated_stats[key] += value
 
-    # Adjust percentages to reflect averages
     for key in percent_keys:
         accumulated_stats[key] = round(accumulated_stats[key] / total_tests, 2)
 
-    # Add dynamic totals
+    # Add total counts dynamically
     accumulated_stats["total_recipe_files"] = total_tests
     accumulated_stats["total_recipes_processed"] = total_tests
 
@@ -78,12 +77,11 @@ def generate_summary(full_build_results: list[BasicJsonType]) -> BasicJsonType:
     }
 
 
-def read_logs(log_dir: Path, allowed_recipes: set[str]) -> list[BasicJsonType]:
+def read_logs(log_dir: Path) -> list[BasicJsonType]:
     """
-    Reads log files and parses JSON results for allowed recipes.
+    Reads log files and parses JSON results.
 
     :param log_dir: Directory containing log files.
-    :param allowed_recipes: Set of allowed recipe names.
     :returns: List of parsed JSON results for full build logs.
     """
     full_build_results: list[BasicJsonType] = []
@@ -97,26 +95,12 @@ def read_logs(log_dir: Path, allowed_recipes: set[str]) -> list[BasicJsonType]:
             data = json.loads(content)
             if "info" in data and "command_name" in data["info"]:
                 recipe_name = Path(data["info"]["directory"]).name
-                if recipe_name in allowed_recipes and recipe_name not in seen_recipes:
+                if recipe_name not in seen_recipes:
                     full_build_results.append(data)
                     seen_recipes.add(recipe_name)  # Avoid duplicates
         except json.JSONDecodeError:
             print(f"Error parsing JSON from file: {file}", file=sys.stderr)
     return full_build_results
-
-
-def read_allow_list(file_path: Path) -> set[str]:
-    """
-    Reads the allow-list of recipes from a file.
-
-    :param file_path: Path to the allow-list.txt file.
-    :returns: Set of allowed recipe names.
-    """
-    if not file_path.is_file():
-        print(f"Allow-list file not found: {file_path}", file=sys.stderr)
-        sys.exit(1)
-    with file_path.open("r", encoding="utf-8") as file:
-        return {line.strip() for line in file if line.strip()}
 
 
 def main() -> None:
@@ -127,17 +111,12 @@ def main() -> None:
         description="Extracts JSON results from CI logs for full build testing."
     )
     parser.add_argument("dir", type=Path, help="Directory containing log files to parse.")  # type: ignore[misc]
-    parser.add_argument("--allow-list", type=Path, required=True, help="Path to allow-list.txt")
     args = parser.parse_args()
 
     log_dir: Final[Path] = args.dir
-    allow_list_file: Final[Path] = args.allow_list
-
-    # Read the dynamic allow list
-    allowed_recipes = read_allow_list(allow_list_file)
 
     # Process logs for full build results
-    full_build_results = read_logs(log_dir, allowed_recipes)
+    full_build_results = read_logs(log_dir)
 
     # Generate final summary
     final_results = {
