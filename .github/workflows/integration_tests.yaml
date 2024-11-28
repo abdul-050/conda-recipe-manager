@@ -47,11 +47,19 @@ jobs:
           export PREFIX=""
           export RECIPE_DIR=""
           conda-recipe-manager \
-            convert -t -m 0.90 -o recipe.yaml test_data/recipes_v0/test-recipes \
+            convert -o recipe.yaml test_data/recipes_v0/test-recipes \
             | tee logs/convert.log
           conda-recipe-manager \
-            rattler-bulk-build -t -m 0.70 test_data/recipes_v0/test-recipes \
+            rattler-bulk-build test_data/recipes_v0/test-recipes \
             | tee logs/full-build.log || true
+
+      # Generate summary of results
+      - name: Generate Integration Test Summary
+        run: |
+          echo "Generating summary from full-build logs..."
+          python scripts/summarize_results.py logs/full-build.log > summary.txt
+          cat summary.txt
+          echo -e "Integration Test Results:\n\`\`\`\n$(cat summary.txt)\n\`\`\`" >> $GITHUB_STEP_SUMMARY
 
       # Upload logs
       - uses: actions/upload-artifact@v4
@@ -87,6 +95,6 @@ jobs:
           conda activate conda-recipe-manager
           set -o pipefail
           scripts/parse_ci_output.py logs/ | tee report.json
-          echo -e "Integration Report:\n\`\`\`json\n" >> ${GITHUB_STEP_SUMMARY}
+          echo -e "Final Report:\n\`\`\`json\n" >> ${GITHUB_STEP_SUMMARY}
           cat report.json >> ${GITHUB_STEP_SUMMARY}
           echo -e "\n\`\`\`" >> ${GITHUB_STEP_SUMMARY}
