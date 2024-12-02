@@ -26,6 +26,7 @@ jobs:
       - name: Read Allow List
         run: |
           echo "Fetching allowed recipes from allow-list.txt"
+          rm -rf test_data/recipes_v0/test-recipes # Clear any existing recipes
           mkdir -p test_data/recipes_v0/test-recipes
           while read recipe; do
             cp -r "test_data/recipes_v0/$recipe" "test_data/recipes_v0/test-recipes/" || echo "Recipe $recipe not found!"
