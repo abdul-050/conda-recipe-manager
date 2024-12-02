@@ -4,5 +4,9 @@ anaconda_recipes_01/types-toml-feedstock
 bioconda_recipes_01/bioconductor-annotationhub
 bioconda_recipes_01/bioconductor-biobase
 bioconda_recipes_01/bioconductor-biocgenerics
-conda_forge_recipes_01/absl-py-feedstock
 conda_forge_recipes_01/affinegap-feedstock
+conda_forge_recipes_01/hubstore-feedstock
+conda_forge_recipes_01/hugin-feedstock
+conda_forge_recipes_01/instructorembedding-feedstock
+conda_forge_recipes_01/interrogate-feedstock
+conda_forge_recipes_01/google-cloud-automl-feedstock
