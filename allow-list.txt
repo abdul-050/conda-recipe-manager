@@ -1,3 +1,9 @@
-anaconda_recipes_01/types-toml-feedstock
 anaconda_recipes_01/boto-feedstock
 anaconda_recipes_01/boto3-feedstock
+anaconda_recipes_01/types-toml-feedstock
+bioconda_recipes_01/bioconductor-annotationhub-feedstock
+bioconda_recipes_01/bioconductor-biobase-feedstock
+bioconda_recipes_01/bioconductor-biocgenerics-feedstock
+conda_forge_recipes_01/absl-py-feedstock
+conda_forge_recipes_01/adios-feedstock
+conda_forge_recipes_01/affine-feedstock
